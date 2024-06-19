@@ -1,4 +1,5 @@
 ﻿#include "all.h"
+using namespace clang::transformer;
 
 static llvm::cl::OptionCategory ToolingSampleCategory("Tooling Sample");
 static llvm::cl::OptionCategory MatcherSampleCategory("Matcher Sample");
@@ -104,6 +105,22 @@ private:
 	Rewriter &Rewrite;
 };
 
+ Transformer::ChangeSetConsumer consumer() {
+  return [](Expected<MutableArrayRef<AtomicChange>> C) {
+     llvm::errs() << "运行了";
+    if (C) {
+      //Changes.insert(Changes.end(), std::make_move_iterator(C->begin()),
+      //               std::make_move_iterator(C->end()));
+      llvm::errs() << "匹配成功";
+    } else {
+      // FIXME: stash this error rather than printing.
+      llvm::errs() << "Error generating changes: "
+                   << llvm::toString(C.takeError()) << "\n";
+      //++ErrorCount;
+    }
+  };
+}
+
 // Implementation of the ASTConsumer interface for reading an AST produced
 // by the Clang parser. It registers a couple of matchers and runs them on
 // the AST.
@@ -111,7 +128,7 @@ class MyASTConsumer : public ASTConsumer {
 public:
 	MyASTConsumer(Rewriter &R) : HandlerForIf(R), HandlerForFor(R), Renamer(R){
 		// Add a simple matcher for finding 'if' statements.
-		//Matcher.addMatcher(ifStmt().bind("ifStmt"), &HandlerForIf);
+		Matcher.addMatcher(ifStmt().bind("ifStmt"), &HandlerForIf);
 
 		//// Add a complex matcher for finding 'for' loops with an initializer set
 		//// to 0, < comparison in the codition and an increment. For example:
@@ -135,12 +152,31 @@ public:
 
 		// 替换类调用
 		
-		Matcher.addMatcher(cxxRecordDecl(hasName("CArray")).bind("classDecl"), &Renamer);
-		Matcher.addMatcher(cxxNewExpr(has(declRefExpr(to(cxxRecordDecl(hasName("CArray")))))).bind("newExpr"), &Renamer);
-		Matcher.addMatcher(varDecl(hasType(namedDecl(hasName("CArray")))).bind("arrayDecl"), &Renamer);
+		//Matcher.addMatcher(cxxRecordDecl(hasName("CArray")).bind("classDecl"), &Renamer);
+		//Matcher.addMatcher(cxxNewExpr(has(declRefExpr(to(cxxRecordDecl(hasName("CArray")))))).bind("newExpr"), &Renamer);
+		//Matcher.addMatcher(varDecl(hasType(namedDecl(hasName("CArray")))).bind("arrayDecl"), &Renamer);
 		
 		
-		Matcher.addMatcher(varDecl(hasType(namedDecl(hasName("CStringArray")))).bind("varDecl"), new ClassRenamer_CStringArray(R));
+		//Matcher.addMatcher(varDecl(hasType(namedDecl(hasName("CStringArray")))).bind("varDecl"), new ClassRenamer_CStringArray(R));
+
+		  StringRef Flag = "flag";
+                RewriteRule Rule = makeRule(
+                    cxxMemberCallExpr(
+                        on(expr(hasType(cxxRecordDecl(
+                                    hasName("proto::ProtoCommandLineFlag"))))
+                               .bind(Flag)),
+                        unless(callee(cxxMethodDecl(hasName("GetProto"))))),
+                    changeTo(node(std::string(Flag)), cat("EXPR")));
+
+				   Transformer *transFormer = new Transformer(std::move(Rule), consumer());
+               // transFormer->registerMatchers(&Matcher);
+		
+				RewriteRule Rule2 = makeRule(
+                    varDecl(hasType(namedDecl(hasName("CArray")))),
+                    {addInclude("clang/OtherLib.h"), changeTo(cat("other()"))});
+                Transformer *transFormer2 =
+                    new Transformer(std::move(Rule2), consumer());
+                transFormer2->registerMatchers(&Matcher);
 	}
 
 	void HandleTranslationUnit(ASTContext &Context) override {
@@ -191,7 +227,7 @@ private:
 
 int main(int argc, const char **argv) {
 
-	argv[1] = "E:\\AWorkSpace\\CppTransplant\\test\\QuickNote.cpp";
+	argv[1] = "E:\\AWorkSpace\\CppTransplant\\test\\test.cpp";
 	auto ExpectedParser =
 		CommonOptionsParser::create(argc, argv, cl::getGeneralCategory());
 

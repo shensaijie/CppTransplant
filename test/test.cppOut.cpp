@@ -10,16 +10,25 @@ namespace pattern
     }
 }
 
-//class CArray
-//{};
+class CArray
+{};
+
+int f(int x);
+
+int h(int x) { return f(x); }
 
 int loop()
 {
+
+    //proto::ProtoCommandLineFlag flag;
+    //int x = flag.foo();
+    //int y = flag.GetProto().foo();
+
     CArray array;
     if (0)
     // the 'if' part
     {
-        for (/* increment */int i = 0; i < 10; i++)
+        for (int i = 0; i < 10; i++)
         {
 
         }
