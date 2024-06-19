@@ -111,27 +111,27 @@ class MyASTConsumer : public ASTConsumer {
 public:
 	MyASTConsumer(Rewriter &R) : HandlerForIf(R), HandlerForFor(R), Renamer(R){
 		// Add a simple matcher for finding 'if' statements.
-		Matcher.addMatcher(ifStmt().bind("ifStmt"), &HandlerForIf);
+		//Matcher.addMatcher(ifStmt().bind("ifStmt"), &HandlerForIf);
 
-		// Add a complex matcher for finding 'for' loops with an initializer set
-		// to 0, < comparison in the codition and an increment. For example:
-		//
-		//  for (int i = 0; i < N; ++i)
-		Matcher.addMatcher(
-			forStmt(hasLoopInit(declStmt(hasSingleDecl(
-				varDecl(hasInitializer(integerLiteral(equals(0))))
-				.bind("initVarName")))),
-				hasIncrement(unaryOperator(
-					hasOperatorName("++"),
-					hasUnaryOperand(declRefExpr(to(
-						varDecl(hasType(isInteger())).bind("incVarName")))))),
-				hasCondition(binaryOperator(
-					hasOperatorName("<"),
-					hasLHS(ignoringParenImpCasts(declRefExpr(to(
-						varDecl(hasType(isInteger())).bind("condVarName"))))),
-					hasRHS(expr(hasType(isInteger()))))))
-				.bind("forLoop"),
-			&HandlerForFor);
+		//// Add a complex matcher for finding 'for' loops with an initializer set
+		//// to 0, < comparison in the codition and an increment. For example:
+		////
+		////  for (int i = 0; i < N; ++i)
+		//Matcher.addMatcher(
+		//	forStmt(hasLoopInit(declStmt(hasSingleDecl(
+		//		varDecl(hasInitializer(integerLiteral(equals(0))))
+		//		.bind("initVarName")))),
+		//		hasIncrement(unaryOperator(
+		//			hasOperatorName("++"),
+		//			hasUnaryOperand(declRefExpr(to(
+		//				varDecl(hasType(isInteger())).bind("incVarName")))))),
+		//		hasCondition(binaryOperator(
+		//			hasOperatorName("<"),
+		//			hasLHS(ignoringParenImpCasts(declRefExpr(to(
+		//				varDecl(hasType(isInteger())).bind("condVarName"))))),
+		//			hasRHS(expr(hasType(isInteger()))))))
+		//		.bind("forLoop"),
+		//	&HandlerForFor);
 
 		// 替换类调用
 		
@@ -164,8 +164,8 @@ public:
 			.write(llvm::outs());
 
 		SourceManager &SM = TheRewriter.getSourceMgr();
-		llvm::errs() << "\n** EndSourceFileAction for: "
-			<< SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
+		/*llvm::errs() << "\n** EndSourceFileAction for: "
+			<< SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";*/
 
 		std::string File =
 			SM.getFileEntryForID(SM.getMainFileID())->getName().str() +
@@ -199,26 +199,16 @@ int main(int argc, const char **argv) {
 				   ExpectedParser->getSourcePathList());
 
 	// 添加额外的包含路径
-	// 这里我们添加了"/path/to/include"作为示例路径
-	// 你需要替换为实际的路径
-	ArgumentsAdjuster ardj1 = getInsertArgumentAdjuster("-IC:\\Program Files (x86)\\Microsoft Visual Studio\\VC98\\Include",
-														 ArgumentInsertPosition::BEGIN);
-
-	ArgumentsAdjuster ardj2 = getInsertArgumentAdjuster("-IE:\\AWorkSpace\\Eps2020\\include\\BaseInclude",
-														 ArgumentInsertPosition::BEGIN);
-	ArgumentsAdjuster ardj3 = getInsertArgumentAdjuster("-IC:\\Program Files(x86)\\Microsoft Visual Studio\\VC98\\MFC\\Include",
-														 ArgumentInsertPosition::BEGIN);
-
-	// 创建一个ArgumentsAdjuster实例，用于添加额外的包含路径
 	CommandLineArguments AdjustedArgs;
-	AdjustedArgs.push_back("-I/path/to/include");
-	// 添加更多的包含路径
-	AdjustedArgs.push_back("-I/another/path/to/include");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\BaseInclude");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\includesm");
+	AdjustedArgs.push_back("-IC:\\Program Files (x86)\\Microsoft Visual Studio\\VC98\\Include");
+	AdjustedArgs.push_back("-IC:\\Program Files(x86)\\Microsoft Visual Studio\\VC98\\MFC\\Include");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\DLL_C\\SSExtend");
 
 	// 将ArgumentsAdjuster应用于ClangTool
 	Tool.appendArgumentsAdjuster(getInsertArgumentAdjuster(AdjustedArgs, ArgumentInsertPosition::END));
-
-	//Tool.appendArgumentsAdjuster(ardj3);
 
 	return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
 }
