@@ -17,8 +17,9 @@ int loop()
 {
     CArray array;
     if (0)
+    // the 'if' part
     {
-        for (int i = 0; i < 10; i++)
+        for (/* increment */int i = 0; i < 10; i++)
         {
 
         }

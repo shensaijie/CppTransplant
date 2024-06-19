@@ -1,167 +1,79 @@
-#include "clang/Tooling/Transformer/Transformer.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Tooling/Tooling.h"
-#include "clang/Tooling/Transformer/RangeSelector.h"
-#include "clang/Tooling/Transformer/RewriteRule.h"
-#include "clang/Tooling/Transformer/Stencil.h"
-#include "llvm/ADT/STLExtras.h"
-//#include "llvm/Support/Errc.h"
-//#include "llvm/Support/Error.h"
-#include "clang/AST/Type.h"
-//#include <optional>
-#include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/Refactoring.h"
+﻿#include "all.h"
 
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/YAMLTraits.h"
-
-#include "llvm/Support/CommandLine.h"
-#include <iostream>
-
-#include <cstdio>
-#include <memory>
-#include <sstream>
-#include <string>
-
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Parse/ParseAST.h"
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Rewrite/Frontend/Rewriters.h"
-//#include "llvm/Support/Host.h"
-#include "llvm/Support/raw_ostream.h"
-
-
-#include "clang/Frontend/CommandLineSourceLoc.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/Refactoring.h"
-#include "clang/Tooling/Refactoring/RefactoringAction.h"
-#include "clang/Tooling/Refactoring/RefactoringOptions.h"
-#include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
-#include "clang/Tooling/Tooling.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/raw_ostream.h"
-#include <optional>
-#include <string>
-
-
-using namespace clang;
-using namespace tooling;
-namespace cl = llvm::cl;
-
-
-
-namespace {
-	using ::clang::transformer::addInclude;
-	using ::clang::transformer::applyFirst;
-	using ::clang::transformer::before;
-	using ::clang::transformer::cat;
-	using ::clang::transformer::changeTo;
-	using ::clang::transformer::editList;
-	using ::clang::transformer::makeRule;
-	using ::clang::transformer::member;
-	using ::clang::transformer::name;
-	using ::clang::transformer::node;
-	using ::clang::transformer::noEdits;
-	using ::clang::transformer::remove;
-	using ::clang::transformer::rewriteDescendants;
-	using ::clang::transformer::RewriteRule;
-	using ::clang::transformer::RewriteRuleWith;
-	using ::clang::transformer::statement;
-    using namespace clang;
-    using namespace clang::driver;
-    using namespace clang::tooling;
-
-    static llvm::cl::OptionCategory ToolingSampleCategory("Tooling Sample");
-
-   //------------------------------------------------------------------------------
-    // Clang rewriter sample. Demonstrates:
-    //
-    // * How to use RecursiveASTVisitor to find interesting AST nodes.
-    // * How to use the Rewriter API to rewrite the source code.
-    //
-    // Eli Bendersky (eliben@gmail.com)
-    // This code is in the public domain
-    //------------------------------------------------------------------------------
-
-
-
-} // namespace
-    
-//------------------------------------------------------------------------------
-// AST matching sample. Demonstrates:
-//
-// * How to write a simple source tool using libTooling.
-// * How to use AST matchers to find interesting AST nodes.
-// * How to use the Rewriter API to rewrite the source code.
-//
-// Eli Bendersky (eliben@gmail.com)
-// This code is in the public domain
-//------------------------------------------------------------------------------
-#include <string>
-
-#include "clang/AST/AST.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendActions.h"
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/Tooling.h"
-#include "llvm/Support/raw_ostream.h"
-
-using namespace clang;
-using namespace clang::ast_matchers;
-using namespace clang::driver;
-using namespace clang::tooling;
-
+static llvm::cl::OptionCategory ToolingSampleCategory("Tooling Sample");
 static llvm::cl::OptionCategory MatcherSampleCategory("Matcher Sample");
 
 class IfStmtHandler : public MatchFinder::MatchCallback {
 public:
-  IfStmtHandler(Rewriter &Rewrite) : Rewrite(Rewrite) {}
+	IfStmtHandler(Rewriter &Rewrite) : Rewrite(Rewrite) {}
 
-  virtual void run(const MatchFinder::MatchResult &Result) {
-    // The matched 'if' statement was bound to 'ifStmt'.
-    if (const IfStmt *IfS = Result.Nodes.getNodeAs<clang::IfStmt>("ifStmt")) {
-      const Stmt *Then = IfS->getThen();
-      Rewrite.InsertText(Then->getBeginLoc(), "// the 'if' part\n", true, true);
+	virtual void run(const MatchFinder::MatchResult &Result) {
+		// The matched 'if' statement was bound to 'ifStmt'.
+		if (const IfStmt *IfS = Result.Nodes.getNodeAs<clang::IfStmt>("ifStmt")) {
+			const Stmt *Then = IfS->getThen();
+			Rewrite.InsertText(Then->getBeginLoc(), "// the 'if' part\n", true, true);
 
-      if (const Stmt *Else = IfS->getElse()) {
-        Rewrite.InsertText(Else->getBeginLoc(), "// the 'else' part\n", true,
-                           true);
-      }
-    }
-  }
+			if (const Stmt *Else = IfS->getElse()) {
+				Rewrite.InsertText(Else->getBeginLoc(), "// the 'else' part\n", true,
+								   true);
+			}
+		}
+	}
 
 private:
-  Rewriter &Rewrite;
+	Rewriter &Rewrite;
 };
 
 class IncrementForLoopHandler : public MatchFinder::MatchCallback {
 public:
-  IncrementForLoopHandler(Rewriter &Rewrite) : Rewrite(Rewrite) {}
+	IncrementForLoopHandler(Rewriter &Rewrite) : Rewrite(Rewrite) {}
 
-  virtual void run(const MatchFinder::MatchResult &Result) {
-    const VarDecl *IncVar = Result.Nodes.getNodeAs<VarDecl>("incVarName");
-    Rewrite.InsertText(IncVar->getBeginLoc(), "/* increment */", true, true);
-  }
+	virtual void run(const MatchFinder::MatchResult &Result) {
+		const VarDecl *IncVar = Result.Nodes.getNodeAs<VarDecl>("incVarName");
+		Rewrite.InsertText(IncVar->getBeginLoc(), "/* increment */", true, true);
+	}
 
 private:
-  Rewriter &Rewrite;
+	Rewriter &Rewrite;
+};
+
+class ClassUsageRenamer : public MatchFinder::MatchCallback {
+public:
+	ClassUsageRenamer(Rewriter &Rewrite) : Rewrite(Rewrite) {}
+
+	virtual void run(const MatchFinder::MatchResult &Result) {
+		if (const auto *ClassDecl = Result.Nodes.getNodeAs<CXXRecordDecl>("classDecl")) {
+			// 替换类定义
+			if (ClassDecl->isThisDeclarationADefinition()) {
+				SourceRange classRange = ClassDecl->getSourceRange();
+				Rewrite.ReplaceText(classRange.getBegin(), ClassDecl->getNameAsString().length(), "NewClassName");
+			}
+		}
+		else if (const auto *NewExpr = Result.Nodes.getNodeAs<CXXNewExpr>("newExpr")) {
+			// 替换类的构造函数调用
+			SourceLocation startLoc = NewExpr->getBeginLoc();
+			if (startLoc.isValid()) {
+				Rewrite.ReplaceText(startLoc, NewExpr->getType()->getAsCXXRecordDecl()->getNameAsString().length(), "NewClassName");
+			}
+		}
+		else if (const auto *CallExpr = Result.Nodes.getNodeAs<CXXMemberCallExpr>("memberCallExpr")) {
+			// 替换成员函数调用（示例仅为了展示，实际操作可能需要更复杂的处理）
+			// 这里的处理会非常依赖于具体的上下文和需求
+		}
+		else if (const VarDecl *VarDeclaration = Result.Nodes.getNodeAs<VarDecl>("arrayDecl")) {
+			// 检查变量的类型是否确实为Carray
+			QualType qt = VarDeclaration->getType();
+			if (qt.getAsString() == "CArray") {
+				// 获取变量类型的源位置范围
+				SourceRange typeRange = VarDeclaration->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+				// 执行替换
+				Rewrite.ReplaceText(typeRange, "Marray");
+			}
+		}
+	}
+
+private:
+	Rewriter &Rewrite;
 };
 
 // Implementation of the ASTConsumer interface for reading an AST produced
@@ -169,110 +81,89 @@ private:
 // the AST.
 class MyASTConsumer : public ASTConsumer {
 public:
-  MyASTConsumer(Rewriter &R) : HandlerForIf(R), HandlerForFor(R) {
-    // Add a simple matcher for finding 'if' statements.
-    Matcher.addMatcher(ifStmt().bind("ifStmt"), &HandlerForIf);
+	MyASTConsumer(Rewriter &R) : HandlerForIf(R), HandlerForFor(R), Renamer(R){
+		// Add a simple matcher for finding 'if' statements.
+		Matcher.addMatcher(ifStmt().bind("ifStmt"), &HandlerForIf);
 
-    // Add a complex matcher for finding 'for' loops with an initializer set
-    // to 0, < comparison in the codition and an increment. For example:
-    //
-    //  for (int i = 0; i < N; ++i)
-    Matcher.addMatcher(
-        forStmt(hasLoopInit(declStmt(hasSingleDecl(
-                    varDecl(hasInitializer(integerLiteral(equals(0))))
-                        .bind("initVarName")))),
-                hasIncrement(unaryOperator(
-                    hasOperatorName("++"),
-                    hasUnaryOperand(declRefExpr(to(
-                        varDecl(hasType(isInteger())).bind("incVarName")))))),
-                hasCondition(binaryOperator(
-                    hasOperatorName("<"),
-                    hasLHS(ignoringParenImpCasts(declRefExpr(to(
-                        varDecl(hasType(isInteger())).bind("condVarName"))))),
-                    hasRHS(expr(hasType(isInteger()))))))
-            .bind("forLoop"),
-        &HandlerForFor);
-  }
+		// Add a complex matcher for finding 'for' loops with an initializer set
+		// to 0, < comparison in the codition and an increment. For example:
+		//
+		//  for (int i = 0; i < N; ++i)
+		Matcher.addMatcher(
+			forStmt(hasLoopInit(declStmt(hasSingleDecl(
+				varDecl(hasInitializer(integerLiteral(equals(0))))
+				.bind("initVarName")))),
+				hasIncrement(unaryOperator(
+					hasOperatorName("++"),
+					hasUnaryOperand(declRefExpr(to(
+						varDecl(hasType(isInteger())).bind("incVarName")))))),
+				hasCondition(binaryOperator(
+					hasOperatorName("<"),
+					hasLHS(ignoringParenImpCasts(declRefExpr(to(
+						varDecl(hasType(isInteger())).bind("condVarName"))))),
+					hasRHS(expr(hasType(isInteger()))))))
+				.bind("forLoop"),
+			&HandlerForFor);
 
-  void HandleTranslationUnit(ASTContext &Context) override {
-    // Run the matchers when we have the whole TU parsed.
-    Matcher.matchAST(Context);
-  }
+		// 替换类调用
+		
+		Matcher.addMatcher(cxxRecordDecl(hasName("CArray")).bind("classDecl"), &Renamer);
+		Matcher.addMatcher(cxxNewExpr(has(declRefExpr(to(cxxRecordDecl(hasName("CArray")))))).bind("newExpr"), &Renamer);
+		Matcher.addMatcher(varDecl(hasType(namedDecl(hasName("CArray")))).bind("arrayDecl"), &Renamer);
+	}
+
+	void HandleTranslationUnit(ASTContext &Context) override {
+		// Run the matchers when we have the whole TU parsed.
+		Matcher.matchAST(Context);
+	}
 
 private:
-  IfStmtHandler HandlerForIf;
-  IncrementForLoopHandler HandlerForFor;
-  MatchFinder Matcher;
+	IfStmtHandler HandlerForIf;
+	IncrementForLoopHandler HandlerForFor;
+	ClassUsageRenamer Renamer;
+	MatchFinder Matcher;
 };
 
 // For each source file provided to the tool, a new FrontendAction is created.
 class MyFrontendAction : public ASTFrontendAction {
 public:
-  MyFrontendAction() {}
-  void EndSourceFileAction() override {
-    TheRewriter.getEditBuffer(TheRewriter.getSourceMgr().getMainFileID())
-        .write(llvm::outs());
+	MyFrontendAction() {}
+	void EndSourceFileAction() override {
+		TheRewriter.getEditBuffer(TheRewriter.getSourceMgr().getMainFileID())
+			.write(llvm::outs());
 
-    SourceManager &SM = TheRewriter.getSourceMgr();
-    llvm::errs() << "\n** EndSourceFileAction for: "
-                 << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
-    
-    std::string File =
-        SM.getFileEntryForID(SM.getMainFileID())->getName().str() +
-        std::string("Out.cpp");
-    std::error_code EC;
-    llvm::raw_fd_ostream OS(File, EC, llvm::sys::fs::OF_TextWithCRLF);
-    if (EC) {
-      llvm::errs() << EC.message() << "\n";
-      //return true;
-    }
-    TheRewriter.getEditBuffer(TheRewriter.getSourceMgr().getMainFileID()).write(OS);
-  }
+		SourceManager &SM = TheRewriter.getSourceMgr();
+		llvm::errs() << "\n** EndSourceFileAction for: "
+			<< SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
 
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef file) override {
-    TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
-    return std::make_unique<MyASTConsumer>(TheRewriter);
-  }
+		std::string File =
+			SM.getFileEntryForID(SM.getMainFileID())->getName().str() +
+			std::string("Out.cpp");
+		std::error_code EC;
+		llvm::raw_fd_ostream OS(File, EC, llvm::sys::fs::OF_Text);
+		if (EC) {
+			llvm::errs() << EC.message() << "\n";
+			//return true;
+		}
+		TheRewriter.getEditBuffer(TheRewriter.getSourceMgr().getMainFileID()).write(OS);
+	}
+
+	std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+												   StringRef file) override {
+		TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
+		return std::make_unique<MyASTConsumer>(TheRewriter);
+	}
 
 private:
-  Rewriter TheRewriter;
+	Rewriter TheRewriter;
 };
 
 int main(int argc, const char **argv) {
-  auto ExpectedParser =
-      CommonOptionsParser::create(argc, argv, cl::getGeneralCategory());
-      
-  ClangTool Tool(ExpectedParser->getCompilations(),
-                 ExpectedParser->getSourcePathList());
+	auto ExpectedParser =
+		CommonOptionsParser::create(argc, argv, cl::getGeneralCategory());
 
-  return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
+	ClangTool Tool(ExpectedParser->getCompilations(),
+				   ExpectedParser->getSourcePathList());
+
+	return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
 }
-
-
-//------------------------------------------------------------------------------
-// Tooling sample. Demonstrates:
-//std::vector<std::unique_ptr<Transformer>> Transformers;
-//clang::ast_matchers::MatchFinder matchFinder;
-//// Records whether any errors occurred in individual changes.
-//int ErrorCount = 0;
-//std::vector<std::string> StringMetadata;
-//FileContentMappings FileContents = {{"header.h", ""}};
-//
-//StringRef Flag = "flag";
-//RewriteRule Rule = makeRule(
-//    cxxMemberCallExpr(
-//        on(expr(hasType(cxxRecordDecl(hasName("proto::ProtoCommandLineFlag"))))
-//               .bind(Flag)),
-//        unless(callee(cxxMethodDecl(hasName("GetProto"))))),
-//    changeTo(node(std::string(Flag)), cat("EXPR")));
-//
-//Rewriter TheRewriter;
-//
-//auto transformer =
-//    std::make_unique<Transformer>(std::move(Rule), MyASTConsumer(TheRewriter));
-//
-//transformer->registerMatchers(&matchFinder);
-//auto Factory = clang::tooling::newFrontendActionFactory(&matchFinder);
-// This code is in the public domain
-//------------------------------------------------------------------------------
