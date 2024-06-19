@@ -67,8 +67,36 @@ public:
 				// 获取变量类型的源位置范围
 				SourceRange typeRange = VarDeclaration->getTypeSourceInfo()->getTypeLoc().getSourceRange();
 				// 执行替换
-				Rewrite.ReplaceText(typeRange, "Marray");
+				Rewrite.ReplaceText(typeRange, "std::vector<int>");
 			}
+		}
+	}
+
+private:
+	Rewriter &Rewrite;
+};
+
+// CStringArray to QStringList
+class ClassRenamer_CStringArray : public MatchFinder::MatchCallback {
+public:
+	ClassRenamer_CStringArray(Rewriter &Rewrite) : Rewrite(Rewrite) {}
+
+	virtual void run(const MatchFinder::MatchResult &Result) {
+		if (const auto *NewExpr = Result.Nodes.getNodeAs<CXXNewExpr>("newExpr")) {
+			// 替换类的构造函数调用
+			SourceLocation startLoc = NewExpr->getBeginLoc();
+			if (startLoc.isValid()) {
+				Rewrite.ReplaceText(startLoc, NewExpr->getType()->getAsCXXRecordDecl()->getNameAsString().length(), "NewClassName");
+			}
+		}
+		else if (const auto *CallExpr = Result.Nodes.getNodeAs<CXXMemberCallExpr>("memberCallExpr")) {
+			// 替换成员函数调用（示例仅为了展示，实际操作可能需要更复杂的处理）
+			// 这里的处理会非常依赖于具体的上下文和需求
+		}
+		else if (const VarDecl *VarDeclaration = Result.Nodes.getNodeAs<VarDecl>("varDecl")) {
+			SourceRange typeRange = VarDeclaration->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+			Rewrite.ReplaceText(typeRange, "QStringList");
+			
 		}
 	}
 
@@ -110,6 +138,9 @@ public:
 		Matcher.addMatcher(cxxRecordDecl(hasName("CArray")).bind("classDecl"), &Renamer);
 		Matcher.addMatcher(cxxNewExpr(has(declRefExpr(to(cxxRecordDecl(hasName("CArray")))))).bind("newExpr"), &Renamer);
 		Matcher.addMatcher(varDecl(hasType(namedDecl(hasName("CArray")))).bind("arrayDecl"), &Renamer);
+		
+		
+		Matcher.addMatcher(varDecl(hasType(namedDecl(hasName("CStringArray")))).bind("varDecl"), new ClassRenamer_CStringArray(R));
 	}
 
 	void HandleTranslationUnit(ASTContext &Context) override {
@@ -158,12 +189,36 @@ private:
 	Rewriter TheRewriter;
 };
 
-//int main(int argc, const char **argv) {
-//	auto ExpectedParser =
-//		CommonOptionsParser::create(argc, argv, cl::getGeneralCategory());
-//
-//	ClangTool Tool(ExpectedParser->getCompilations(),
-//				   ExpectedParser->getSourcePathList());
-//
-//	return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
-//}
+int main(int argc, const char **argv) {
+
+	argv[1] = "E:\\AWorkSpace\\CppTransplant\\test\\QuickNote.cpp";
+	auto ExpectedParser =
+		CommonOptionsParser::create(argc, argv, cl::getGeneralCategory());
+
+	ClangTool Tool(ExpectedParser->getCompilations(),
+				   ExpectedParser->getSourcePathList());
+
+	// 添加额外的包含路径
+	// 这里我们添加了"/path/to/include"作为示例路径
+	// 你需要替换为实际的路径
+	ArgumentsAdjuster ardj1 = getInsertArgumentAdjuster("-IC:\\Program Files (x86)\\Microsoft Visual Studio\\VC98\\Include",
+														 ArgumentInsertPosition::BEGIN);
+
+	ArgumentsAdjuster ardj2 = getInsertArgumentAdjuster("-IE:\\AWorkSpace\\Eps2020\\include\\BaseInclude",
+														 ArgumentInsertPosition::BEGIN);
+	ArgumentsAdjuster ardj3 = getInsertArgumentAdjuster("-IC:\\Program Files(x86)\\Microsoft Visual Studio\\VC98\\MFC\\Include",
+														 ArgumentInsertPosition::BEGIN);
+
+	// 创建一个ArgumentsAdjuster实例，用于添加额外的包含路径
+	CommandLineArguments AdjustedArgs;
+	AdjustedArgs.push_back("-I/path/to/include");
+	// 添加更多的包含路径
+	AdjustedArgs.push_back("-I/another/path/to/include");
+
+	// 将ArgumentsAdjuster应用于ClangTool
+	Tool.appendArgumentsAdjuster(getInsertArgumentAdjuster(AdjustedArgs, ArgumentInsertPosition::END));
+
+	//Tool.appendArgumentsAdjuster(ardj3);
+
+	return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
+}

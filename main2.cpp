@@ -25,11 +25,14 @@ Transformer::ChangeSetConsumer consumer()
 			auto Err = C.takeError();
 			ErrorMessages.push_back(llvm::toString(std::move(Err)));
 			++ErrorCount;
+
+			std::cout << "XXX错误\n";
 		}
 		};
 }
 
-int main(int argc, const char** argv)
+
+int main2(int argc, const char** argv)
 {
 
 	std::vector<std::unique_ptr<Transformer>> Transformers;
@@ -56,7 +59,7 @@ namespace proto {
 }
 	int main()
 	{
-		//CArray array;
+		CArray array;
 	}
     proto::ProtoCommandLineFlag flag;
     int x = flag.foo();
@@ -74,6 +77,19 @@ namespace proto {
 	transformer->registerMatchers(&matchFinder);
 	auto Factory = clang::tooling::newFrontendActionFactory(&matchFinder);
 
+
+	auto ExpectedParser =
+		CommonOptionsParser::create(argc, argv, cl::getGeneralCategory());
+
+	ClangTool Tool(ExpectedParser->getCompilations(),
+				   ExpectedParser->getSourcePathList());
+
+	if (Tool.run(Factory.get()) == 0)
+	{
+		std::cout << "clangtool 运行失败";
+	}
+
+
 	std::string Code = ("#include \"header.h\"\n" + Input);
 	// ʹ���޸ĺ�Ĵ������й���
 	if (!clang::tooling::runToolOnCodeWithArgs(
@@ -83,6 +99,7 @@ namespace proto {
 		llvm::errs() << "���й���ʧ�ܡ�\n";
 		//return 0; // ʧ��ʱ��ǰ����
 	}
+	std::cout << Changes.size() << std::endl;
 
 	// ���ռ����ĸ���Ӧ���ڴ���
 	auto ChangedCode = clang::tooling::applyAtomicChanges(
