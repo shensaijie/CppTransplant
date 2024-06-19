@@ -158,12 +158,12 @@ private:
 	Rewriter TheRewriter;
 };
 
-int main(int argc, const char **argv) {
-	auto ExpectedParser =
-		CommonOptionsParser::create(argc, argv, cl::getGeneralCategory());
-
-	ClangTool Tool(ExpectedParser->getCompilations(),
-				   ExpectedParser->getSourcePathList());
-
-	return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
-}
+//int main(int argc, const char **argv) {
+//	auto ExpectedParser =
+//		CommonOptionsParser::create(argc, argv, cl::getGeneralCategory());
+//
+//	ClangTool Tool(ExpectedParser->getCompilations(),
+//				   ExpectedParser->getSourcePathList());
+//
+//	return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
+//}
