@@ -1,7 +1,4 @@
 //#include <iostream>
-
-
-
 namespace pattern
 {
     namespace OldNamespace
@@ -11,9 +8,12 @@ namespace pattern
 }
 
 class CArray
-{};
+{
+    public:
+    void Add(){}
+};
 
-int f(int x);
+int F(int x);
 
 int h(int x) { return f(x); }
 
@@ -24,9 +24,14 @@ int loop()
     //int x = flag.foo();
     //int y = flag.GetProto().foo();
 
+    h(1);
+
+    testFun();
+    TestFun2();
+
     CArray array;
+    array.add();
     if (0)
-    // the 'if' part
     {
         for (int i = 0; i < 10; i++)
         {

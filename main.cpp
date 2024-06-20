@@ -128,27 +128,23 @@ public:
 		if (const CallExpr *Call = Result.Nodes.getNodeAs<clang::CallExpr>("call")) {
 
 			std::string FuncName;
-			SourceRange Range;
-			if (const FunctionDecl *FD = Call->getDirectCallee()) 
+            auto loc = Call->getBeginLoc();
+            //Rewrite.InsertText(loc, "X");
+            //Rewrite.InsertText(Call->getRParenLoc(), "Y");
+            //Rewrite.InsertText(Call->getCallee()->getExprLoc(), "Z");
+            //Rewrite.InsertTextAfter(Call->getCallee()->getEndLoc(), "K");
+            //Rewrite.InsertTextBefore(Call->getCallee()->getEndLoc(), "K");
+            //Rewrite.InsertTextAfterToken(Call->getCallee()->getEndLoc(), "F");
+            if (const FunctionDecl *FD = Call->getDirectCallee()) 
 			{
-				
-				FuncName = FD->getNameInfo().getName().getAsString();
-				Range = FD->getNameInfo().getSourceRange();
-			}
-			if (const CXXMemberCallExpr *MemberCall = dyn_cast<CXXMemberCallExpr>(Call))
-			{	
-				if (const CXXMethodDecl *MD = MemberCall->getMethodDecl()) {
-					FuncName = MD->getNameAsString();
-					Range = Call->getDirectCallee()->getSourceRange();
-				}
-			std::cout << FuncName;
-			}
+              FuncName = FD->getNameInfo().getName().getAsString();
+            }
+
 			if (FuncName.size())
 			{
-				
 				FuncName[0] = std::tolower(FuncName[0]);
-				//std::cout << " " << FuncName << std::endl;
-				Rewrite.ReplaceText(Range, FuncName);
+                          Rewrite.ReplaceText(Call->getCallee()->getExprLoc(),
+                                              FuncName.size(), FuncName);
 			}
 		}
 	}
@@ -166,28 +162,7 @@ public:
 		// Add a simple matcher for finding 'if' statements.
 		//Matcher.addMatcher(ifStmt().bind("ifStmt"), &HandlerForIf);
 
-		//// Add a complex matcher for finding 'for' loops with an initializer set
-		//// to 0, < comparison in the codition and an increment. For example:
-		////
-		////  for (int i = 0; i < N; ++i)
-		//Matcher.addMatcher(
-		//	forStmt(hasLoopInit(declStmt(hasSingleDecl(
-		//		varDecl(hasInitializer(integerLiteral(equals(0))))
-		//		.bind("initVarName")))),
-		//		hasIncrement(unaryOperator(
-		//			hasOperatorName("++"),
-		//			hasUnaryOperand(declRefExpr(to(
-		//				varDecl(hasType(isInteger())).bind("incVarName")))))),
-		//		hasCondition(binaryOperator(
-		//			hasOperatorName("<"),
-		//			hasLHS(ignoringParenImpCasts(declRefExpr(to(
-		//				varDecl(hasType(isInteger())).bind("condVarName"))))),
-		//			hasRHS(expr(hasType(isInteger()))))))
-		//		.bind("forLoop"),
-		//	&HandlerForFor);
-
 		// 替换类调用
-		
 		//Matcher.addMatcher(cxxRecordDecl(hasName("CArray")).bind("classDecl"), &Renamer);
 		//Matcher.addMatcher(cxxNewExpr(has(declRefExpr(to(cxxRecordDecl(hasName("CArray")))))).bind("newExpr"), &Renamer);
 		//Matcher.addMatcher(varDecl(hasType(namedDecl(hasName("CArray")))).bind("arrayDecl"), &Renamer);
