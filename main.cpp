@@ -91,8 +91,22 @@ public:
 			}
 		}
 		else if (const auto *CallExpr = Result.Nodes.getNodeAs<CXXMemberCallExpr>("memberCallExpr")) {
-			// 替换成员函数调用（示例仅为了展示，实际操作可能需要更复杂的处理）
-			// 这里的处理会非常依赖于具体的上下文和需求
+
+			if (const CXXMethodDecl *MD = CallExpr->getMethodDecl()) {
+
+				std::cout << "pi------------\n";
+				auto FuncName = MD->getNameAsString();
+				std::cout << FuncName;
+				if (FuncName == "Add")
+					Rewrite.ReplaceText(CallExpr->getSourceRange(), "push_back");
+				else if (FuncName == "GetSize")
+				{
+					std::cout << "111";
+					Rewrite.ReplaceText(CallExpr->getSourceRange(), "size");
+				}
+			}
+			
+
 		}
 		else if (const VarDecl *VarDeclaration = Result.Nodes.getNodeAs<VarDecl>("varDecl")) {
 			SourceRange typeRange = VarDeclaration->getTypeSourceInfo()->getTypeLoc().getSourceRange();
@@ -105,21 +119,43 @@ private:
 	Rewriter &Rewrite;
 };
 
- Transformer::ChangeSetConsumer consumer() {
-  return [](Expected<MutableArrayRef<AtomicChange>> C) {
-     llvm::errs() << "运行了";
-    if (C) {
-      //Changes.insert(Changes.end(), std::make_move_iterator(C->begin()),
-      //               std::make_move_iterator(C->end()));
-      llvm::errs() << "匹配成功";
-    } else {
-      // FIXME: stash this error rather than printing.
-      llvm::errs() << "Error generating changes: "
-                   << llvm::toString(C.takeError()) << "\n";
-      //++ErrorCount;
-    }
-  };
-}
+// 函数转小驼峰
+class FunctionCallHandler : public MatchFinder::MatchCallback {
+public:
+	explicit FunctionCallHandler(Rewriter &Rewrite) : Rewrite(Rewrite) {}
+
+	virtual void run(const MatchFinder::MatchResult &Result) {
+		if (const CallExpr *Call = Result.Nodes.getNodeAs<clang::CallExpr>("call")) {
+
+			std::string FuncName;
+			SourceRange Range;
+			if (const FunctionDecl *FD = Call->getDirectCallee()) 
+			{
+				
+				FuncName = FD->getNameInfo().getName().getAsString();
+				Range = FD->getNameInfo().getSourceRange();
+			}
+			if (const CXXMemberCallExpr *MemberCall = dyn_cast<CXXMemberCallExpr>(Call))
+			{	
+				if (const CXXMethodDecl *MD = MemberCall->getMethodDecl()) {
+					FuncName = MD->getNameAsString();
+					Range = Call->getDirectCallee()->getSourceRange();
+				}
+			std::cout << FuncName;
+			}
+			if (FuncName.size())
+			{
+				
+				FuncName[0] = std::tolower(FuncName[0]);
+				//std::cout << " " << FuncName << std::endl;
+				Rewrite.ReplaceText(Range, FuncName);
+			}
+		}
+	}
+
+private:
+	Rewriter &Rewrite;
+};
 
 // Implementation of the ASTConsumer interface for reading an AST produced
 // by the Clang parser. It registers a couple of matchers and runs them on
@@ -128,7 +164,7 @@ class MyASTConsumer : public ASTConsumer {
 public:
 	MyASTConsumer(Rewriter &R) : HandlerForIf(R), HandlerForFor(R), Renamer(R){
 		// Add a simple matcher for finding 'if' statements.
-		Matcher.addMatcher(ifStmt().bind("ifStmt"), &HandlerForIf);
+		//Matcher.addMatcher(ifStmt().bind("ifStmt"), &HandlerForIf);
 
 		//// Add a complex matcher for finding 'for' loops with an initializer set
 		//// to 0, < comparison in the codition and an increment. For example:
@@ -157,26 +193,10 @@ public:
 		//Matcher.addMatcher(varDecl(hasType(namedDecl(hasName("CArray")))).bind("arrayDecl"), &Renamer);
 		
 		
+		//Matcher.addMatcher(cxxMemberCallExpr(callee(cxxMethodDecl(ofClass(hasName("CStringArray"))))).bind("memberCallExpr"), new ClassRenamer_CStringArray(R));
 		//Matcher.addMatcher(varDecl(hasType(namedDecl(hasName("CStringArray")))).bind("varDecl"), new ClassRenamer_CStringArray(R));
+		Matcher.addMatcher(callExpr().bind("call"), new FunctionCallHandler(R));
 
-		  StringRef Flag = "flag";
-                RewriteRule Rule = makeRule(
-                    cxxMemberCallExpr(
-                        on(expr(hasType(cxxRecordDecl(
-                                    hasName("proto::ProtoCommandLineFlag"))))
-                               .bind(Flag)),
-                        unless(callee(cxxMethodDecl(hasName("GetProto"))))),
-                    changeTo(node(std::string(Flag)), cat("EXPR")));
-
-				   Transformer *transFormer = new Transformer(std::move(Rule), consumer());
-               // transFormer->registerMatchers(&Matcher);
-		
-				RewriteRule Rule2 = makeRule(
-                    varDecl(hasType(namedDecl(hasName("CArray")))),
-                    {addInclude("clang/OtherLib.h"), changeTo(cat("other()"))});
-                Transformer *transFormer2 =
-                    new Transformer(std::move(Rule2), consumer());
-                transFormer2->registerMatchers(&Matcher);
 	}
 
 	void HandleTranslationUnit(ASTContext &Context) override {
@@ -196,8 +216,8 @@ class MyFrontendAction : public ASTFrontendAction {
 public:
 	MyFrontendAction() {}
 	void EndSourceFileAction() override {
-		TheRewriter.getEditBuffer(TheRewriter.getSourceMgr().getMainFileID())
-			.write(llvm::outs());
+		/*TheRewriter.getEditBuffer(TheRewriter.getSourceMgr().getMainFileID())
+			.write(llvm::outs());*/
 
 		SourceManager &SM = TheRewriter.getSourceMgr();
 		/*llvm::errs() << "\n** EndSourceFileAction for: "
@@ -227,21 +247,49 @@ private:
 
 int main(int argc, const char **argv) {
 
-	argv[1] = "E:\\AWorkSpace\\CppTransplant\\test\\test.cpp";
+	//argv[1] = "E:\\AWorkSpace\\CppTransplant\\test\\QuickNote.cpp";
 	auto ExpectedParser =
 		CommonOptionsParser::create(argc, argv, cl::getGeneralCategory());
 
 	ClangTool Tool(ExpectedParser->getCompilations(),
 				   ExpectedParser->getSourcePathList());
 
+
 	// 添加额外的包含路径
 	CommandLineArguments AdjustedArgs;
 	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\BaseInclude");
-	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\AdjustBase");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\ado");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\BaseInclude");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\BCGCBPro");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\cairo");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\DataGrid");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\EditInclude");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\epshouse");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\ExchangeInclude");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\FunctionCore");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\GDIPlus");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\glbase");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\InterfaceInclude");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\oci");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\ssadobase");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\SSctrlbar");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\SSDBCore");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\SSEditBase");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\SSPipe");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\SSProject");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\UserFunc");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\VSInterface");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\_SSEnvironment");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\_UserInterface");
 	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\includesm");
-	AdjustedArgs.push_back("-IC:\\Program Files (x86)\\Microsoft Visual Studio\\VC98\\Include");
-	AdjustedArgs.push_back("-IC:\\Program Files(x86)\\Microsoft Visual Studio\\VC98\\MFC\\Include");
-	AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\DLL_C\\SSExtend");
+	//AdjustedArgs.push_back("-IC:\\Program Files(x86)\\Microsoft Visual Studio\\VC98\\atl\\Include");
+	//AdjustedArgs.push_back("-IC:\\Program Files(x86)\\Microsoft Visual Studio\\VC98\\MFC\\Include");
+	//AdjustedArgs.push_back("-IC:\\Program Files (x86)\\Microsoft Visual Studio\\VC98\\Include");
+	//AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\DLL_C\\SSExtend");
+	AdjustedArgs.push_back("-IE:\\AWorkSpace\\CppTransplant\\working");
+	//AdjustedArgs.push_back("-IE:\\AWorkSpace\\Eps2020\\include\\BCGCBPro");
+	//AdjustedArgs.push_back("/D _WIN32");
 
 	// 将ArgumentsAdjuster应用于ClangTool
 	Tool.appendArgumentsAdjuster(getInsertArgumentAdjuster(AdjustedArgs, ArgumentInsertPosition::END));
