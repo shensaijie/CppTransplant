@@ -25,7 +25,7 @@ int loop()
     //int y = flag.GetProto().foo();
 
     h(1);
-
+    F();
     testFun();
     TestFun2();
 
