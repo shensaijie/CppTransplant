@@ -34,3 +34,6 @@ namespace cl = llvm::cl;
 using namespace clang::ast_matchers;
 using namespace clang::driver;
 using namespace clang::tooling;
+
+
+using namespace std;
